@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conway's Game of Life</title>
+  <style type="text/css" media="screen">
+body {
+  background-color: white;
+  color: black;
+}
+  </style>
+</head>
+
+<body>
+
+<main>
+<h1>Conway's Game of Life</h1>
+
+<div id="grid"></div>
+<button id="new">New grid</button>
+<button id="next">Next generation</button>
+<button id="auto">Auto run</button>
+
+<p>In <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life" target="_blank">Conway's Game of Life</a>,
+the following rules are applied in each generation (turn):</p>
+
+<ul>
+  <li>Any live cell with two or three live neighbors survives.</li>
+  <li>Any dead cell with exactly three live neighbors becomes a live cell.</li>
+  <li>All other live cells die.</li>
+</ul>
+
+<p>A neighbor is defined as any adjacent cell horizontally, vertically, or diagonally.</p>
+</main>
+
+<script>
+class Grid {
+  constructor(width, height) {
+    this.width = Math.max(1, width);
+    this.height = Math.max(1, height);
+    this.cells = new Array(this.width * this.height).fill(false);
+  }
+  coordinatesToIndex(x, y) {
+    return x + (y * this.width);
+  }
+  countAliveNeighbors(x, y) {
+    let count = 0;
+    for (let i = Math.max(0, x - 1); i <= Math.min(x + 1, this.width - 1); i++) {
+      for (let j = Math.max(0, y - 1); j <= Math.min(y + 1, this.height - 1); j++) {
+        if ((i == x) && (j == y)) {
+          // Do not check self
+          continue;
+        }
+        if (this.isAlive(i, j)) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+  isAlive(x, y) {
+    if (x < 0) {
+      return false;
+    }
+    if (y < 0) {
+      return false;
+    }
+    if (x >= this.width) {
+      return false;
+    }
+    if (y >= this.height) {
+      return false;
+    }
+    return this.cells[this.coordinatesToIndex(x, y)];
+  }
+
+  /*
+   * Return a new Grid containing the next generation of cells based on the rules.
+   */
+  nextGeneration() {
+    let grid = new Grid(this.width, this.height);
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
+        let neighborCount = this.countAliveNeighbors(x, y);
+        if (neighborCount == 3) {
+          grid.cells[this.coordinatesToIndex(x, y)] = true;
+        }
+        else if ((neighborCount == 2) && this.isAlive(x, y)) {
+          grid.cells[this.coordinatesToIndex(x, y)] = true;
+        }
+      }
+    }
+    return grid;
+  }
+
+  /*
+   * Return a width x height Grid with limit alive cells.
+   */
+  static random(width, height, limit) {
+    let count = 0, grid = new Grid(width, height), length = width * height;
+    while (count < limit) {
+      let index = Math.floor(Math.random() * length);
+      if (!grid.cells[index]) {
+        grid.cells[index] = true;
+        count++;
+      }
+    }
+    return grid;
+  }
+}
+
+/*
+ * A quick implementation to get a visual of Grid.
+ */
+function drawGrid(grid) {
+  let rows = [];
+  for (let y = 0; y < grid.height; y++) {
+    let row = [];
+    for (let x = 0; x < grid.width; x++) {
+      if (grid.isAlive(x, y)) {
+        row.push('O');
+      }
+      else {
+        row.push(' ');
+      }
+    }
+    rows.push(row.join(''));
+  }
+  let gridText = rows.join('\n');
+
+  rows = [];
+  for (let y = 0; y < grid.height; y++) {
+    let row = [];
+    for (let x = 0; x < grid.width; x++) {
+      row.push(grid.countAliveNeighbors(x, y));
+    }
+    rows.push(row.join(''));
+  }
+  gridText += '\n\n' + rows.join('\n');
+
+  document.querySelector('#grid').innerHTML = '<pre>' + gridText + '</pre>';
+}
+
+let grid = null;
+function turn() {
+  if (grid) {
+    grid = grid.nextGeneration();
+  }
+  else {
+    grid = Grid.random(10, 10, 50);
+  }
+  drawGrid(grid);
+}
+turn();
+
+document.querySelector('#new').addEventListener('click', (event) => {
+  grid = null;
+  turn();
+});
+document.querySelector('#next').addEventListener('click', turn);
+
+let running = null;
+document.querySelector('#auto').addEventListener('click', (event) => {
+  if (running) {
+    clearInterval(running);
+    running = null;
+  }
+  else {
+    running = setInterval(turn, 500);
+  }
+});
+</script>
+</body>
+
+</html>
