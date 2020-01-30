@@ -1,6 +1,5 @@
 # Conway's Game of Life
-In [Conway's Game of Life]
-(https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life),
+In [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life),
 the following rules are applied in each generation (turn):
 
 - Any live cell with two or three live neighbors survives.
