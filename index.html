@@ -14,17 +14,26 @@ output {
   display: block;
   padding-bottom: 1em;
 }
+pre {
+  font-family: "Courier New", monospace;
+  font-size: 20px;
+  line-height: 20px;
+  text-transform: full-width;
+}
 table {
   border-collapse: collapse;
+  font-size: 16px;
+  line-height: 16px;
   margin: 0;
   padding: 0;
+  text-align: center;
 }
 td {
   background-color: white;
   border: 1px solid black;
   color: black;
-  height: 1em;
-  width: 1em;
+  height: 18px;
+  width: 18px;
 }
 .alive {
   background-color: blue;
@@ -96,7 +105,12 @@ const GOSPER_CELLS = [
   [35, 4],
   [36, 3],
   [36, 4]
-]
+];
+
+/*
+ * Size in pixels of each cell.
+ */
+const SCALE = 20;
 
 class Grid {
   constructor(width, height) {
@@ -322,14 +336,13 @@ class ASCIIDisplay extends Display {
       gridText += '\n\n' + rows.join('\n');
     }
 
-    target.innerHTML = gridText;
+    target.textContent = gridText;
   }
 }
 
 class CanvasDisplay extends Display {
-  constructor(parent, scale = 20, cellColor = '#0000FF', textColor = '#000000', backgroundColor = '#FFFFFF') {
+  constructor(parent, cellColor = '#0000FF', textColor = '#000000', backgroundColor = '#FFFFFF') {
     super(parent);
-    this.scale = scale;
     this.cellColor = cellColor;
     this.textColor = textColor;
     this.backgroundColor = backgroundColor;
@@ -341,8 +354,9 @@ class CanvasDisplay extends Display {
       target = document.createElement('canvas');
       this.parent.appendChild(target);
     }
-    let width = grid.width * this.scale,
-        height = grid.height * this.scale;
+    let width = grid.width * SCALE,
+        height = grid.height * SCALE,
+        middle = SCALE / 2;
     if ((target.width != width) || (target.height != height)) {
       target.width = width;
       target.height = height;
@@ -358,13 +372,12 @@ class CanvasDisplay extends Display {
       for (let x = 0; x < grid.width; x++) {
         if (grid.isAlive(x, y)) {
           context.fillStyle = this.cellColor;
-          context.fillRect(x * this.scale, y * this.scale, this.scale, this.scale);
+          context.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
         }
         if (drawCount) {
           let count = grid.countAliveNeighbors(x, y);
-          let middle = this.scale / 2;
           context.fillStyle = this.textColor;
-          context.fillText(count, (x * this.scale) + middle, (y * this.scale) + middle);
+          context.fillText(count, (x * SCALE) + middle, (y * SCALE) + middle);
         }
       }
     }
@@ -379,14 +392,14 @@ class CanvasDisplay extends Display {
     context.stroke();
     for (let x = 1; x < grid.width; x++) {
       context.beginPath();
-      context.moveTo(x * this.scale, 0);
-      context.lineTo(x * this.scale, height);
+      context.moveTo(x * SCALE, 0);
+      context.lineTo(x * SCALE, height);
       context.stroke();
     }
     for (let y = 1; y < grid.height; y++) {
       context.beginPath();
-      context.moveTo(0, y * this.scale);
-      context.lineTo(width, y * this.scale);
+      context.moveTo(0, y * SCALE);
+      context.lineTo(width, y * SCALE);
       context.stroke();
     }
   }
@@ -430,10 +443,11 @@ class TableDisplay extends Display {
   }
 }
 
+let output = document.querySelector('#grid');
 let grid = null;
-//let display = new ASCIIDisplay(document.querySelector('#grid'), 'O');
-//let display = new CanvasDisplay(document.querySelector('#grid'));
-let display = new TableDisplay(document.querySelector('#grid'));
+let display = new ASCIIDisplay(output, 'O');
+//let display = new CanvasDisplay(output);
+//let display = new TableDisplay(output);
 function turn(random = true) {
   if (grid) {
     grid = grid.nextGeneration();
@@ -450,6 +464,18 @@ function turn(random = true) {
 }
 turn();
 
+output.addEventListener('click', (event) => {
+  let box = output.getBoundingClientRect(),
+      x = Math.min(Math.floor((event.clientX - box.left) / SCALE), grid.width - 1),
+      y = Math.min(Math.floor((event.clientY - box.top) / SCALE), grid.height - 1);
+  if (x < 0) {
+    x = 0;
+  }
+  if (y < 0) {
+    y = 0;
+  }
+  console.log('x,y:', x, y);
+});
 document.querySelector('#new').addEventListener('click', (event) => {
   grid = null;
   turn();
