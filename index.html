@@ -10,6 +10,25 @@ body {
   background-color: white;
   color: black;
 }
+output {
+  display: block;
+  padding-bottom: 1em;
+}
+table {
+  border-collapse: collapse;
+  margin: 0;
+  padding: 0;
+}
+td {
+  background-color: white;
+  border: 1px solid black;
+  color: black;
+  height: 1em;
+  width: 1em;
+}
+.alive {
+  background-color: blue;
+}
   </style>
 </head>
 
@@ -250,7 +269,171 @@ function drawGrid(grid) {
   document.querySelector('#grid').innerHTML = '<pre>' + gridText + '</pre>';
 }
 
+class Display {
+  constructor(parent) {
+    if (!(parent instanceof Node)) {
+      throw new TypeError('Bad DOM parent.');
+    }
+    this.parent = parent;
+  }
+  draw(grid) {
+    console.assert(false, {msg: 'Not implemented'});
+  }
+}
+
+class ASCIIDisplay extends Display {
+  constructor(parent, liveCell = 'O', deadCell = ' ') {
+    super(parent);
+    this.liveCell = liveCell;
+    this.deadCell = deadCell;
+  }
+  draw(grid, drawCount = false) {
+    let target = this.parent.querySelector('pre');
+    if (target == null) {
+      this.parent.innerHTML = '';
+      target = document.createElement('pre');
+      this.parent.appendChild(target);
+    }
+
+    let rows = [];
+    for (let y = 0; y < grid.height; y++) {
+      let row = [];
+      for (let x = 0; x < grid.width; x++) {
+        if (grid.isAlive(x, y)) {
+          row.push(this.liveCell);
+        }
+        else {
+          row.push(this.deadCell);
+        }
+      }
+      rows.push(row.join(''));
+    }
+    let gridText = rows.join('\n');
+
+    if (drawCount) {
+      rows = [];
+      for (let y = 0; y < grid.height; y++) {
+        let row = [];
+        for (let x = 0; x < grid.width; x++) {
+          row.push(grid.countAliveNeighbors(x, y));
+        }
+        rows.push(row.join(''));
+      }
+      gridText += '\n\n' + rows.join('\n');
+    }
+
+    target.innerHTML = gridText;
+  }
+}
+
+class CanvasDisplay extends Display {
+  constructor(parent, scale = 20, cellColor = '#0000FF', textColor = '#000000', backgroundColor = '#FFFFFF') {
+    super(parent);
+    this.scale = scale;
+    this.cellColor = cellColor;
+    this.textColor = textColor;
+    this.backgroundColor = backgroundColor;
+  }
+  draw(grid, drawCount = false) {
+    let target = this.parent.querySelector('canvas');
+    if (target == null) {
+      this.parent.innerHTML = '';
+      target = document.createElement('canvas');
+      this.parent.appendChild(target);
+    }
+    let width = grid.width * this.scale,
+        height = grid.height * this.scale;
+    if ((target.width != width) || (target.height != height)) {
+      target.width = width;
+      target.height = height;
+    }
+
+    let context = target.getContext('2d');
+    context.textAlign = 'center';
+    context.strokeStyle = this.textColor;
+
+    context.fillStyle = this.backgroundColor;
+    context.fillRect(0, 0, width, height);
+    for (let y = 0; y < grid.height; y++) {
+      for (let x = 0; x < grid.width; x++) {
+        if (grid.isAlive(x, y)) {
+          context.fillStyle = this.cellColor;
+          context.fillRect(x * this.scale, y * this.scale, this.scale, this.scale);
+        }
+        if (drawCount) {
+          let count = grid.countAliveNeighbors(x, y);
+          let middle = this.scale / 2;
+          context.fillStyle = this.textColor;
+          context.fillText(count, (x * this.scale) + middle, (y * this.scale) + middle);
+        }
+      }
+    }
+
+    // Draw grid lines
+    context.beginPath();
+    context.moveTo(1, 1);
+    context.lineTo(width - 1, 1);
+    context.lineTo(width - 1, height - 1);
+    context.lineTo(1, height - 1);
+    context.closePath();
+    context.stroke();
+    for (let x = 1; x < grid.width; x++) {
+      context.beginPath();
+      context.moveTo(x * this.scale, 0);
+      context.lineTo(x * this.scale, height);
+      context.stroke();
+    }
+    for (let y = 1; y < grid.height; y++) {
+      context.beginPath();
+      context.moveTo(0, y * this.scale);
+      context.lineTo(width, y * this.scale);
+      context.stroke();
+    }
+  }
+}
+
+class TableDisplay extends Display {
+  constructor(parent) {
+    super(parent);
+  }
+  draw(grid, drawCount = false) {
+    let target = this.parent.querySelector('table');
+    if (target == null) {
+      this.parent.innerHTML = '';
+      target = document.createElement('table');
+      this.parent.appendChild(target);
+    }
+
+    let rows = [];
+    for (let y = 0; y < grid.height; y++) {
+      let row = [];
+      row.push('  <tr>');
+      for (let x = 0; x < grid.width; x++) {
+        let cell = '    ';
+        if (grid.isAlive(x, y)) {
+          cell += '<td class="alive">';
+        }
+        else {
+          cell += '<td class="dead">';
+        }
+        if (drawCount) {
+          let count = grid.countAliveNeighbors(x, y);
+          cell += count;
+        }
+        cell += '</td>';
+        row.push(cell);
+      }
+      row.push('  </tr>');
+      rows.push(row.join('\n'));
+    }
+    target.innerHTML = rows.join('\n');
+  }
+}
+
 let grid = null;
+//let display = new ASCIIDisplay(document.querySelector('#grid'), 'O');
+//let display = new CanvasDisplay(document.querySelector('#grid'));
+let display = new TableDisplay(document.querySelector('#grid'));
 function turn(random = true) {
   if (grid) {
     grid = grid.nextGeneration();
@@ -263,7 +446,7 @@ function turn(random = true) {
       grid = Grid.gosper();
     }
   }
-  drawGrid(grid);
+  display.draw(grid, true);
 }
 turn();
 
