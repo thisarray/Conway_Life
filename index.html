@@ -12,7 +12,8 @@ body {
 }
 output {
   display: block;
-  padding-bottom: 1em;
+  margin-bottom: 1em;
+  margin-left: 1em;
 }
 pre {
   font-family: "Courier New", monospace;
@@ -112,6 +113,11 @@ const GOSPER_CELLS = [
  */
 const SCALE = 20;
 
+/*
+ * Boolean flag indicating whether to show neighbor counts.
+ */
+const SHOW_COUNT = false;
+
 class Grid {
   constructor(width, height) {
     this.width = Math.max(1, width);
@@ -171,6 +177,26 @@ class Grid {
     return grid;
   }
 
+  toggle(x, y) {
+    let grid = new Grid(this.width, this.height);
+    grid.cells = this.cells.slice();
+    if (x < 0) {
+      return grid;
+    }
+    if (y < 0) {
+      return grid;
+    }
+    if (x >= this.width) {
+      return grid;
+    }
+    if (y >= this.height) {
+      return grid;
+    }
+    let index = this.coordinatesToIndex(x, y);
+    grid.cells[index] = !this.cells[index];
+    return grid;
+  }
+
   /*
    * Return a new Grid with the Gosper glider gun.
    */
@@ -207,6 +233,12 @@ class Grid {
     for (let [x, y] of GOSPER_CELLS) {
       console.assert(grid.isAlive(x, y),
                      {x: x, y: y, msg: 'grid.isAlive() is unexpectedly dead.'});
+      grid = grid.toggle(x, y);
+      console.assert(!grid.isAlive(x, y),
+                     {x: x, y: y, msg: 'cell is unexpectedly alive after toggle().'});
+      grid = grid.toggle(x, y);
+      console.assert(grid.isAlive(x, y),
+                     {x: x, y: y, msg: 'cell is unexpectedly dead after toggle().'});
     }
     for (let [x, y, alive, count] of [
       [0, 4, false, 1],
@@ -460,7 +492,7 @@ function turn(random = true) {
       grid = Grid.gosper();
     }
   }
-  display.draw(grid, true);
+  display.draw(grid, SHOW_COUNT);
 }
 turn();
 
@@ -474,7 +506,8 @@ output.addEventListener('click', (event) => {
   if (y < 0) {
     y = 0;
   }
-  console.log('x,y:', x, y);
+  grid = grid.toggle(x, y);
+  display.draw(grid, SHOW_COUNT);
 });
 document.querySelector('#new').addEventListener('click', (event) => {
   grid = null;
@@ -484,7 +517,9 @@ document.querySelector('#gosper').addEventListener('click', (event) => {
   grid = null;
   turn(false);
 });
-document.querySelector('#next').addEventListener('click', turn);
+document.querySelector('#next').addEventListener('click', (event) => {
+  turn();
+});
 
 let running = null;
 document.querySelector('#auto').addEventListener('click', (event) => {
