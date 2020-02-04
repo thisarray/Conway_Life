@@ -283,38 +283,6 @@ class Grid {
 }
 Grid.test();
 
-/*
- * A quick implementation to get a visual of Grid.
- */
-function drawGrid(grid) {
-  let rows = [];
-  for (let y = 0; y < grid.height; y++) {
-    let row = [];
-    for (let x = 0; x < grid.width; x++) {
-      if (grid.isAlive(x, y)) {
-        row.push('O');
-      }
-      else {
-        row.push(' ');
-      }
-    }
-    rows.push(row.join(''));
-  }
-  let gridText = rows.join('\n');
-
-  rows = [];
-  for (let y = 0; y < grid.height; y++) {
-    let row = [];
-    for (let x = 0; x < grid.width; x++) {
-      row.push(grid.countAliveNeighbors(x, y));
-    }
-    rows.push(row.join(''));
-  }
-  gridText += '\n\n' + rows.join('\n');
-
-  document.querySelector('#grid').innerHTML = '<pre>' + gridText + '</pre>';
-}
-
 class Display {
   constructor(parent) {
     if (!(parent instanceof Node)) {
