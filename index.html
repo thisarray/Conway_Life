@@ -178,21 +178,21 @@ class Grid {
   }
 
   toggle(x, y) {
-    let grid = new Grid(this.width, this.height);
-    grid.cells = this.cells.slice();
     if (x < 0) {
-      return grid;
+      return this;
     }
     if (y < 0) {
-      return grid;
+      return this;
     }
     if (x >= this.width) {
-      return grid;
+      return this;
     }
     if (y >= this.height) {
-      return grid;
+      return this;
     }
-    let index = this.coordinatesToIndex(x, y);
+    let grid = new Grid(this.width, this.height),
+        index = this.coordinatesToIndex(x, y);
+    grid.cells = this.cells.slice();
     grid.cells[index] = !this.cells[index];
     return grid;
   }
@@ -364,6 +364,7 @@ class CanvasDisplay extends Display {
 
     let context = target.getContext('2d');
     context.textAlign = 'center';
+    context.textBaseline = 'middle';
     context.strokeStyle = this.textColor;
 
     context.fillStyle = this.backgroundColor;
@@ -444,10 +445,11 @@ class TableDisplay extends Display {
 }
 
 let output = document.querySelector('#grid');
-let grid = null;
-let display = new ASCIIDisplay(output, 'O');
+let display = new ASCIIDisplay(output);
 //let display = new CanvasDisplay(output);
 //let display = new TableDisplay(output);
+
+let grid = null;
 function turn(random = true) {
   if (grid) {
     grid = grid.nextGeneration();
