@@ -67,7 +67,7 @@ the following rules are applied in each generation (turn):</p>
 
 <script>
 /*
- * Coordinates of the alive cells in the Gosper glider gun.
+ * Array coordinates of the alive cells in the Gosper glider gun.
  */
 const GOSPER_CELLS = [
   [1, 5],
@@ -109,7 +109,7 @@ const GOSPER_CELLS = [
 ];
 
 /*
- * Size in pixels of each cell.
+ * Integer size in pixels of each cell.
  */
 const SCALE = 20;
 
@@ -118,20 +118,38 @@ const SCALE = 20;
  */
 const SHOW_COUNT = false;
 
+/*
+ * An immutable representation of the current state.
+ */
 class Grid {
   constructor(width, height) {
     this.width = Math.max(1, width);
     this.height = Math.max(1, height);
     this.cells = new Array(this.width * this.height).fill(false);
   }
-  coordinatesToIndex(x, y) {
+
+  /*
+   * Return the index for coordinates (x, y).
+   */
+  _coordinatesToIndex(x, y) {
     return x + (y * this.width);
   }
+
+  /*
+   * Return the integer number of alive neighbors of the cell at coordinates (x, y).
+   */
   countAliveNeighbors(x, y) {
+    if (typeof x !== 'number') {
+      throw new TypeError('x must be a number.');
+    }
+    if (typeof y !== 'number') {
+      throw new TypeError('y must be a number.');
+    }
+
     let count = 0;
     for (let i = Math.max(0, x - 1); i <= Math.min(x + 1, this.width - 1); i++) {
       for (let j = Math.max(0, y - 1); j <= Math.min(y + 1, this.height - 1); j++) {
-        if ((i == x) && (j == y)) {
+        if ((i === x) && (j === y)) {
           // Do not check self
           continue;
         }
@@ -142,41 +160,55 @@ class Grid {
     }
     return count;
   }
+
+  /*
+   * Return true if the cell at coordinates (x, y) is alive.
+   */
   isAlive(x, y) {
+    if (typeof x !== 'number') {
+      throw new TypeError('x must be a number.');
+    }
+    if (typeof y !== 'number') {
+      throw new TypeError('y must be a number.');
+    }
+
     if (x < 0) {
       return false;
     }
     if (y < 0) {
       return false;
     }
-    if (x >= this.width) {
+    if (this.width <= x) {
       return false;
     }
-    if (y >= this.height) {
+    if (this.height <= y) {
       return false;
     }
-    return this.cells[this.coordinatesToIndex(x, y)];
+    return this.cells[this._coordinatesToIndex(x, y)];
   }
 
   /*
-   * Return a new Grid containing the next generation of cells based on the rules.
+   * Return a new Grid instance containing the next generation of cells based on the rules.
    */
   nextGeneration() {
     let grid = new Grid(this.width, this.height);
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         let neighborCount = this.countAliveNeighbors(x, y);
-        if (neighborCount == 3) {
-          grid.cells[this.coordinatesToIndex(x, y)] = true;
+        if (neighborCount === 3) {
+          grid.cells[grid._coordinatesToIndex(x, y)] = true;
         }
-        else if ((neighborCount == 2) && this.isAlive(x, y)) {
-          grid.cells[this.coordinatesToIndex(x, y)] = true;
+        else if ((neighborCount === 2) && this.isAlive(x, y)) {
+          grid.cells[grid._coordinatesToIndex(x, y)] = true;
         }
       }
     }
     return grid;
   }
 
+  /*
+   * Makes the cell at coordinates (x, y) alive if it is not and vice versa.
+   */
   toggle(x, y) {
     if (x < 0) {
       return this;
@@ -184,37 +216,40 @@ class Grid {
     if (y < 0) {
       return this;
     }
-    if (x >= this.width) {
+    if (this.width <= x) {
       return this;
     }
-    if (y >= this.height) {
+    if (this.height <= y) {
       return this;
     }
     let grid = new Grid(this.width, this.height),
-        index = this.coordinatesToIndex(x, y);
+        index = this._coordinatesToIndex(x, y);
     grid.cells = this.cells.slice();
     grid.cells[index] = !this.cells[index];
     return grid;
   }
 
   /*
-   * Return a new Grid with the Gosper glider gun.
+   * Return a new 40 x 40 Grid instance containing the Gosper glider gun.
    */
   static gosper() {
     let grid = new Grid(40, 40);
     for (let [x, y] of GOSPER_CELLS) {
-      grid.cells[grid.coordinatesToIndex(x, y)] = true;
+      grid.cells[grid._coordinatesToIndex(x, y)] = true;
     }
     return grid;
   }
 
   /*
-   * Return a width x height Grid with limit alive cells.
+   * Return a new width x height Grid instance with limit alive cells.
    */
   static random(width, height, limit) {
-    let count = 0, grid = new Grid(width, height), length = width * height;
+    let grid = new Grid(width, height),
+        length = width * height,
+        count = 0,
+        index;
     while (count < limit) {
-      let index = Math.floor(Math.random() * length);
+      index = Math.floor(Math.random() * length);
       if (!grid.cells[index]) {
         grid.cells[index] = true;
         count++;
@@ -228,17 +263,17 @@ class Grid {
    */
   static test() {
     let grid = Grid.gosper();
-    console.assert(grid.cells.filter(v => v).length == GOSPER_CELLS.length,
-                   {msg: 'Incorrect number of alive cells.'});
+    console.assert(grid.cells.filter(v => v).length === GOSPER_CELLS.length,
+                   {msg: 'Gosper glider gun is incorrect.'});
     for (let [x, y] of GOSPER_CELLS) {
       console.assert(grid.isAlive(x, y),
-                     {x: x, y: y, msg: 'grid.isAlive() is unexpectedly dead.'});
+                     {msg: 'grid.isAlive() failed.'});
       grid = grid.toggle(x, y);
       console.assert(!grid.isAlive(x, y),
-                     {x: x, y: y, msg: 'cell is unexpectedly alive after toggle().'});
+                     {msg: 'grid.isAlive() failed.'});
       grid = grid.toggle(x, y);
       console.assert(grid.isAlive(x, y),
-                     {x: x, y: y, msg: 'cell is unexpectedly dead after toggle().'});
+                     {msg: 'grid.isAlive() failed.'});
     }
     for (let [x, y, alive, count] of [
       [0, 4, false, 1],
@@ -261,21 +296,21 @@ class Grid {
       [13, 10, false, 2],
       [14, 10, false, 2],
       [15, 10, false, 1]]) {
-      console.assert(grid.countAliveNeighbors(x, y) == count,
-                     {x: x, y: y, msg: 'grid.countAliveNeighbors() failed.'});
-      console.assert(grid.isAlive(x, y) == alive,
-                     {x: x, y: y, msg: 'grid.isAlive() failed.'});
+      console.assert(grid.countAliveNeighbors(x, y) === count,
+                     {msg: 'grid.countAliveNeighbors() failed.'});
+      console.assert(grid.isAlive(x, y) === alive,
+                     {msg: 'grid.isAlive() failed.'});
     }
 
     let offset = grid.width * 11;
     for (let y = 11; y < grid.height; y++) {
       for (let x = 0; x < grid.width; x++) {
-        console.assert(grid.coordinatesToIndex(x, y) == (x + offset),
-                       {x: x, y: y, msg: 'grid.coordinatesToIndex() failed.'});
-        console.assert(grid.countAliveNeighbors(x, y) == 0,
-                       {x: x, y: y, msg: 'grid.countAliveNeighbors() failed.'});
+        console.assert(grid._coordinatesToIndex(x, y) === (x + offset),
+                       {msg: 'grid._coordinatesToIndex() failed.'});
+        console.assert(grid.countAliveNeighbors(x, y) === 0,
+                       {msg: 'grid.countAliveNeighbors() failed.'});
         console.assert(!grid.isAlive(x, y),
-                       {x: x, y: y, msg: 'grid.isAlive() is unexpectedly alive.'});
+                       {msg: 'grid.isAlive() failed.'});
       }
       offset += grid.width;
     }
@@ -290,6 +325,7 @@ class Display {
     }
     this.parent = parent;
   }
+
   draw(grid) {
     console.assert(false, {msg: 'Not implemented'});
   }
@@ -301,7 +337,8 @@ class ASCIIDisplay extends Display {
     this.liveCell = liveCell;
     this.deadCell = deadCell;
   }
-  draw(grid, drawCount = false) {
+
+  draw(grid) {
     let target = this.parent.querySelector('pre');
     if (target == null) {
       this.parent.innerHTML = '';
@@ -324,7 +361,7 @@ class ASCIIDisplay extends Display {
     }
     let gridText = rows.join('\n');
 
-    if (drawCount) {
+    if (SHOW_COUNT) {
       rows = [];
       for (let y = 0; y < grid.height; y++) {
         let row = [];
@@ -347,7 +384,8 @@ class CanvasDisplay extends Display {
     this.textColor = textColor;
     this.backgroundColor = backgroundColor;
   }
-  draw(grid, drawCount = false) {
+
+  draw(grid) {
     let target = this.parent.querySelector('canvas');
     if (target == null) {
       this.parent.innerHTML = '';
@@ -357,7 +395,7 @@ class CanvasDisplay extends Display {
     let width = grid.width * SCALE,
         height = grid.height * SCALE,
         middle = SCALE / 2;
-    if ((target.width != width) || (target.height != height)) {
+    if ((target.width !== width) || (target.height !== height)) {
       target.width = width;
       target.height = height;
     }
@@ -375,7 +413,7 @@ class CanvasDisplay extends Display {
           context.fillStyle = this.cellColor;
           context.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
         }
-        if (drawCount) {
+        if (SHOW_COUNT) {
           let count = grid.countAliveNeighbors(x, y);
           context.fillStyle = this.textColor;
           context.fillText(count, (x * SCALE) + middle, (y * SCALE) + middle);
@@ -410,7 +448,8 @@ class TableDisplay extends Display {
   constructor(parent) {
     super(parent);
   }
-  draw(grid, drawCount = false) {
+
+  draw(grid) {
     let target = this.parent.querySelector('table');
     if (target == null) {
       this.parent.innerHTML = '';
@@ -430,7 +469,7 @@ class TableDisplay extends Display {
         else {
           cell += '<td class="dead">';
         }
-        if (drawCount) {
+        if (SHOW_COUNT) {
           let count = grid.countAliveNeighbors(x, y);
           cell += count;
         }
@@ -444,30 +483,31 @@ class TableDisplay extends Display {
   }
 }
 
-let output = document.querySelector('#grid');
-let display = new ASCIIDisplay(output);
-//let display = new CanvasDisplay(output);
-//let display = new TableDisplay(output);
+const OUTPUT = document.querySelector('#grid');
+let display = new ASCIIDisplay(OUTPUT);
+//let display = new CanvasDisplay(OUTPUT);
+//let display = new TableDisplay(OUTPUT);
 
 let grid = null;
-function turn(random = true) {
-  if (grid) {
+function turn(gosper = false) {
+  if (grid instanceof Grid) {
     grid = grid.nextGeneration();
   }
   else {
-    if (random) {
-      grid = Grid.random(10, 10, 50);
-    }
-    else {
+    if (gosper) {
       grid = Grid.gosper();
     }
+    else {
+      grid = Grid.random(10, 10, 50);
+    }
   }
-  display.draw(grid, SHOW_COUNT);
+  display.draw(grid);
 }
 turn();
 
-output.addEventListener('click', (event) => {
-  let box = output.getBoundingClientRect(),
+OUTPUT.addEventListener('click', (event) => {
+  // Use OUTPUT because event.target may be a child of OUTPUT
+  let box = OUTPUT.getBoundingClientRect(),
       x = Math.min(Math.floor((event.clientX - box.left) / SCALE), grid.width - 1),
       y = Math.min(Math.floor((event.clientY - box.top) / SCALE), grid.height - 1);
   if (x < 0) {
@@ -485,7 +525,7 @@ document.querySelector('#new').addEventListener('click', (event) => {
 });
 document.querySelector('#gosper').addEventListener('click', (event) => {
   grid = null;
-  turn(false);
+  turn(true);
 });
 document.querySelector('#next').addEventListener('click', (event) => {
   turn();
