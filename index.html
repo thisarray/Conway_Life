@@ -12,8 +12,7 @@ body {
 }
 output {
   display: block;
-  margin-bottom: 1em;
-  margin-left: 1em;
+  margin: 1em 0;
 }
 pre {
   font-family: "Courier New", monospace;
@@ -23,18 +22,17 @@ pre {
 }
 table {
   border-collapse: collapse;
-  font-size: 16px;
-  line-height: 16px;
   margin: 0;
   padding: 0;
-  text-align: center;
 }
 td {
   background-color: white;
   border: 1px solid black;
-  color: black;
-  height: 18px;
-  width: 18px;
+  font-size: 14px;
+  text-align: center;
+  /* height and width so resulting cell is 20px by 20px */
+  height: 17px;
+  width: 17px;
 }
 .alive {
   background-color: blue;
@@ -48,10 +46,13 @@ td {
 <h1>Conway's Game of Life</h1>
 
 <output id="grid"></output>
+
+<p>
 <button id="new">New grid</button>
 <button id="gosper">Gosper grid</button>
 <button id="next">Next generation</button>
 <button id="auto">Auto run</button>
+</p>
 
 <p>In <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life" target="_blank">Conway's Game of Life</a>,
 the following rules are applied in each generation (turn):</p>
@@ -123,6 +124,13 @@ const SHOW_COUNT = false;
  */
 class Grid {
   constructor(width, height) {
+    if (typeof width !== 'number') {
+      throw new TypeError('width must be a number.');
+    }
+    if (typeof height !== 'number') {
+      throw new TypeError('height must be a number.');
+    }
+
     this.width = Math.max(1, width);
     this.height = Math.max(1, height);
     this.cells = new Array(this.width * this.height).fill(false);
@@ -210,6 +218,13 @@ class Grid {
    * Makes the cell at coordinates (x, y) alive if it is not and vice versa.
    */
   toggle(x, y) {
+    if (typeof x !== 'number') {
+      throw new TypeError('x must be a number.');
+    }
+    if (typeof y !== 'number') {
+      throw new TypeError('y must be a number.');
+    }
+
     if (x < 0) {
       return this;
     }
@@ -222,6 +237,7 @@ class Grid {
     if (this.height <= y) {
       return this;
     }
+
     let grid = new Grid(this.width, this.height),
         index = this._coordinatesToIndex(x, y);
     grid.cells = this.cells.slice();
@@ -314,6 +330,43 @@ class Grid {
       }
       offset += grid.width;
     }
+
+    grid = new Grid(10, 12);
+    console.assert(grid.cells.every(v => (!v)),
+                   {msg: 'grid.cells is incorrect.'});
+    for (let x = 0; x < grid.width; x++) {
+      for (let y = 0; y < grid.height; y++) {
+        console.assert(grid.countAliveNeighbors(x, y) === 0,
+                       {msg: 'grid.countAliveNeighbors() failed.'});
+        console.assert(!grid.isAlive(x, y),
+                       {msg: 'grid.isAlive() failed.'});
+        grid = grid.toggle(x, y);
+        console.assert(grid.isAlive(x, y),
+                       {msg: 'grid.isAlive() failed.'});
+        grid = grid.toggle(x, y);
+        console.assert(!grid.isAlive(x, y),
+                       {msg: 'grid.isAlive() failed.'});
+      }
+    }
+
+    for (let i = 0; i < 10; i++) {
+      if (i > 0) {
+        grid = grid.nextGeneration();
+      }
+      for (let [x, y] of [
+        [0, 0],
+        [0, 1],
+        [1, 0],
+        [1, 1]]) {
+          if (i === 0) {
+            grid = grid.toggle(x, y);
+          }
+          console.assert(grid.isAlive(x, y),
+                         {msg: 'grid.isAlive() failed.'});
+      }
+      console.assert(grid.cells.filter(v => v).length === 4,
+                     {msg: 'grid.cells is incorrect.'});
+    }
   }
 }
 Grid.test();
@@ -378,7 +431,7 @@ class ASCIIDisplay extends Display {
 }
 
 class CanvasDisplay extends Display {
-  constructor(parent, cellColor = '#0000FF', textColor = '#000000', backgroundColor = '#FFFFFF') {
+  constructor(parent, cellColor = 'blue', textColor = 'black', backgroundColor = 'white') {
     super(parent);
     this.cellColor = cellColor;
     this.textColor = textColor;
@@ -386,21 +439,23 @@ class CanvasDisplay extends Display {
   }
 
   draw(grid) {
-    let target = this.parent.querySelector('canvas');
+    let target = this.parent.querySelector('canvas'),
+        width = grid.width * SCALE,
+        height = grid.height * SCALE,
+        middle = Math.floor(SCALE / 2),
+        context;
     if (target == null) {
       this.parent.innerHTML = '';
       target = document.createElement('canvas');
       this.parent.appendChild(target);
     }
-    let width = grid.width * SCALE,
-        height = grid.height * SCALE,
-        middle = SCALE / 2;
     if ((target.width !== width) || (target.height !== height)) {
       target.width = width;
       target.height = height;
     }
 
-    let context = target.getContext('2d');
+    context = target.getContext('2d');
+    context.font = '14px monospace';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.strokeStyle = this.textColor;
@@ -414,14 +469,14 @@ class CanvasDisplay extends Display {
           context.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
         }
         if (SHOW_COUNT) {
-          let count = grid.countAliveNeighbors(x, y);
           context.fillStyle = this.textColor;
-          context.fillText(count, (x * SCALE) + middle, (y * SCALE) + middle);
+          context.fillText(grid.countAliveNeighbors(x, y), (x * SCALE) + middle, (y * SCALE) + middle);
         }
       }
     }
 
     // Draw grid lines
+    // Outer border
     context.beginPath();
     context.moveTo(1, 1);
     context.lineTo(width - 1, 1);
@@ -429,12 +484,14 @@ class CanvasDisplay extends Display {
     context.lineTo(1, height - 1);
     context.closePath();
     context.stroke();
+    // Vertical lines
     for (let x = 1; x < grid.width; x++) {
       context.beginPath();
       context.moveTo(x * SCALE, 0);
       context.lineTo(x * SCALE, height);
       context.stroke();
     }
+    // Horizontal lines
     for (let y = 1; y < grid.height; y++) {
       context.beginPath();
       context.moveTo(0, y * SCALE);
@@ -445,10 +502,6 @@ class CanvasDisplay extends Display {
 }
 
 class TableDisplay extends Display {
-  constructor(parent) {
-    super(parent);
-  }
-
   draw(grid) {
     let target = this.parent.querySelector('table');
     if (target == null) {
@@ -457,29 +510,27 @@ class TableDisplay extends Display {
       this.parent.appendChild(target);
     }
 
-    let rows = [];
+    target.innerHTML = '';
     for (let y = 0; y < grid.height; y++) {
-      let row = [];
-      row.push('  <tr>');
+      let row = document.createElement('tr');
       for (let x = 0; x < grid.width; x++) {
-        let cell = '    ';
-        if (grid.isAlive(x, y)) {
-          cell += '<td class="alive">';
+        let cell = document.createElement('td');
+        if (SHOW_COUNT) {
+          cell.appendChild(document.createTextNode(grid.countAliveNeighbors(x, y).toFixed()));
         }
         else {
-          cell += '<td class="dead">';
+          cell.appendChild(document.createTextNode('    '));
         }
-        if (SHOW_COUNT) {
-          let count = grid.countAliveNeighbors(x, y);
-          cell += count;
+        if (grid.isAlive(x, y)) {
+          cell.classList.add('alive');
         }
-        cell += '</td>';
-        row.push(cell);
+        else {
+          cell.classList.add('dead');
+        }
+        row.appendChild(cell);
       }
-      row.push('  </tr>');
-      rows.push(row.join('\n'));
+      target.appendChild(row);
     }
-    target.innerHTML = rows.join('\n');
   }
 }
 
@@ -488,7 +539,8 @@ let display = new ASCIIDisplay(OUTPUT);
 //let display = new CanvasDisplay(OUTPUT);
 //let display = new TableDisplay(OUTPUT);
 
-let grid = null;
+let grid = null,
+    running = 0;
 function turn(gosper = false) {
   if (grid instanceof Grid) {
     grid = grid.nextGeneration();
@@ -503,7 +555,6 @@ function turn(gosper = false) {
   }
   display.draw(grid);
 }
-turn();
 
 OUTPUT.addEventListener('click', (event) => {
   // Use OUTPUT because event.target may be a child of OUTPUT
@@ -517,7 +568,7 @@ OUTPUT.addEventListener('click', (event) => {
     y = 0;
   }
   grid = grid.toggle(x, y);
-  display.draw(grid, SHOW_COUNT);
+  display.draw(grid);
 });
 document.querySelector('#new').addEventListener('click', (event) => {
   grid = null;
@@ -530,17 +581,17 @@ document.querySelector('#gosper').addEventListener('click', (event) => {
 document.querySelector('#next').addEventListener('click', (event) => {
   turn();
 });
-
-let running = null;
 document.querySelector('#auto').addEventListener('click', (event) => {
-  if (running) {
-    clearInterval(running);
-    running = null;
-  }
-  else {
+  if (running === 0) {
     running = setInterval(turn, 500);
   }
+  else {
+    clearInterval(running);
+    running = 0;
+  }
 });
+
+turn();
 </script>
 </body>
 
