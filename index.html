@@ -74,6 +74,7 @@ the following rules are applied in each generation (turn):</p>
 </ul>
 
 <p>A neighbor is defined as any adjacent cell horizontally, vertically, or diagonally.</p>
+
 </main>
 
 <script>
@@ -154,7 +155,7 @@ class Grid {
   }
 
   /*
-   * Return the integer number of alive neighbors of the cell at coordinates (x, y).
+   * Return the integer count of alive neighbors of the cell at coordinates (x, y).
    */
   countAliveNeighbors(x, y) {
     if (typeof x !== 'number') {
@@ -225,7 +226,7 @@ class Grid {
   }
 
   /*
-   * Makes the cell at coordinates (x, y) alive if it is not and vice versa.
+   * Return a new Grid instance resulting from making the cell at coordinates (x, y) alive if it is dead and dead if it is alive.
    */
   toggle(x, y) {
     if (typeof x !== 'number') {
@@ -274,6 +275,7 @@ class Grid {
         length = width * height,
         count = 0,
         index;
+    // Place limit alive cells
     while (count < limit) {
       index = Math.floor(Math.random() * length);
       if (!grid.cells[index]) {
@@ -429,7 +431,7 @@ class ASCIIDisplay extends Display {
       for (let y = 0; y < grid.height; y++) {
         let row = [];
         for (let x = 0; x < grid.width; x++) {
-          row.push(grid.countAliveNeighbors(x, y));
+          row.push(grid.countAliveNeighbors(x, y).toFixed());
         }
         rows.push(row.join(''));
       }
@@ -480,7 +482,7 @@ class CanvasDisplay extends Display {
         }
         if (SHOW_COUNT) {
           context.fillStyle = this.textColor;
-          context.fillText(grid.countAliveNeighbors(x, y), (x * SCALE) + middle, (y * SCALE) + middle);
+          context.fillText(grid.countAliveNeighbors(x, y).toFixed(), (x * SCALE) + middle, (y * SCALE) + middle);
         }
       }
     }
